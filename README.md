@@ -18,7 +18,7 @@ Scripts to mass-upload files and directories to Harvard dataverse (dataverse.org
     ## Upload all files from current directory and all files from subdirectories 1 level deep
     python3 uploadFilesToExistingDataset.py -u https://dataverse.org -d hdl:HANDLEID/EXAMPLE_SHOULDER/EXAMPLE_ID -k API-KEY-HERE * */*
 
-# ISSUES
+# Issues
 
 * Directory names are not included in uploaded file names
   * All will be uploaded into the root directory of the dataset

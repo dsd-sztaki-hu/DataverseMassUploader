@@ -21,5 +21,7 @@ for filename in args.infile:
 	response=api.upload_datafile(args.dataset, filename, json_str=None, is_pid=True)
 	if response.status_code!=200:
 		print("Error uploading %s"%filename)
+		print("  Response message was: '%s'"%response._content)
+#		var_dump(response)
 	else:
 		print("Successful upload: %s"%filename)

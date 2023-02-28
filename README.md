@@ -4,6 +4,7 @@ Scripts to mass-upload files and directories to Harvard dataverse (dataverse.org
 # Prerequisites
 
 * install python3
+* install python3-pip
 * install pyDataverse
   * `pip3 install pydataverse`
 

@@ -10,16 +10,18 @@
 ### Synology DSM
 
 * add SynoCommunity to package sources:
- * package manager -> settings -> package sources -> add
- * name: SynoCommunity
- * location: https://packages.synocommunity.com/
+  * package manager -> settings -> package sources -> add
+  * name: SynoCommunity
+  * location: https://packages.synocommunity.com/
 * install prerequisites in the package manager
- * python3
- * git
+  * python3
+  * git
 * install pip using the command line (log in using ssh)
-    python3 -m ensurepip
-    python3 -m pip install --upgrade pip
-    python3 -m pip install pydataverse
+```
+python3 -m ensurepip
+python3 -m pip install --upgrade pip
+python3 -m pip install pydataverse
+```
 
 ## Download DataverseMassUploader using git
 

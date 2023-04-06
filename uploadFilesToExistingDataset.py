@@ -18,15 +18,14 @@ args = argparser.parse_args()
 
 #var_dump(args)
 
-def isCurlAvailable():
-	return subprocess.run(["curl --version"], shell=True, capture_output=True).returncode == 0
+curlAvailable=subprocess.run(["curl --version"], shell=True, capture_output=True).returncode == 0
 
 api = NativeApi(args.baseUrl,args.apiKey)
 for filename in args.infile:
 	#print("File size: %d"%os.lstat(filename).st_size)
 	filesize=os.lstat(filename).st_size
 	if filesize>=2**31:
-		if(not isCurlAvailable()):
+		if(not curlAvailable):
 			print("ERROR: Not uploading %s: size is too big (%d bytes), but curl is unavailable."%(filename,filesize))
 			continue
 		print("Size of %s is too big (%d bytes), uploading with curl."%(filename,filesize))

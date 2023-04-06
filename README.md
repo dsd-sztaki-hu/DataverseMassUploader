@@ -29,6 +29,3 @@ repositories. It is based on the pyDataverse library.
 
 # Issues
 
-* Directory names are not included in uploaded file names
-  * All will be uploaded into the root directory of the dataset
-  * Directory structure is not preserved

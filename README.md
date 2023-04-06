@@ -1,13 +1,20 @@
 # DataverseMassUploader
-Scripts to mass-upload files and directories to Harvard dataverse (dataverse.org) repositories, using pyDataverse
 
-# Prerequisites
+This is a Python script to mass-upload files and directories to Harvard dataverse (dataverse.org) 
+repositories. It is based on the pyDataverse library.
 
-* install python3
-* install python3-pip
-* install curl (optional)
-* install pyDataverse
-  * `pip3 install pydataverse`
+# Installation
+
+## Prerequisites
+
+* python3
+* python3-pip
+* curl (optional)
+* pyDataverse
+
+## Installation instructions
+
+[Detailed installation instructions are available for several platforms in INSTALL.md](INSTALL.md)
 
 # Example
 

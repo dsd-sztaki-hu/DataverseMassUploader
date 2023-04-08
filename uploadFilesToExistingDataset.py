@@ -34,13 +34,13 @@ def uploadWithCurl(filename,fileMetadata):
 		print("Successful upload: %s"%filename)
 
 def upload(filename,fileMetadata):
-		response=api.upload_datafile(args.dataset, filename, json_str=fileMetadata, is_pid=True)
-		if response.status_code!=200:
-			print("Error uploading %s"%filename)
-			print("  Response message was: '%s'"%response._content)
-#			var_dump(response)
-		else:
-			print("Successful upload: %s"%filename)
+	response=api.upload_datafile(args.dataset, filename, json_str=fileMetadata, is_pid=True)
+	if response.status_code!=200:
+		print("Error uploading %s"%filename)
+		print("  Response message was: '%s'"%response._content)
+#		var_dump(response)
+	else:
+		print("Successful upload: %s"%filename)
 
 
 api = NativeApi(args.baseUrl,args.apiKey)

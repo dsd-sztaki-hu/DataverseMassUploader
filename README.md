@@ -27,5 +27,12 @@ repositories. It is based on the pyDataverse library.
     ## Upload all files from current directory and all files from subdirectories 1 level deep
     python3 uploadFilesToExistingDataset.py -u https://dataverse.org -d hdl:HANDLEID/EXAMPLE_SHOULDER/EXAMPLE_ID -k API-KEY-HERE * */*
 
+# Further configuration
+
+## enviroment variables
+
+* DataverseMassUploaderCurlUseThreshold: the threshold in bytes over which curl is used. 2^25 by default, as python upload uses filesize*3 RAM.
+
 # Issues
 
+* upload with curl sometimes does not work (specific versions of curl?), although curl reports success

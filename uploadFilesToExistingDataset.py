@@ -20,6 +20,7 @@ args = argparser.parse_args()
 #var_dump(args)
 
 curlAvailable=subprocess.run(["curl --version"], shell=True, capture_output=True).returncode == 0
+curlUseThreashold=int(os.environ.get('DataverseMassUploaderCurlUseThreshold', 2**25))
 
 def uploadWithCurl(filename,fileMetadata):
 	print("Size of %s is too big (%d bytes), uploading with curl."%(filename,filesize))
@@ -48,7 +49,7 @@ for filename in args.infile:
 	filesize=os.lstat(filename).st_size
 	fileMetadata=json.dumps({"filename": filename, "directoryLabel": os.path.dirname(filename)})
 	#print("File size: %d"%filesize)
-	if filesize>=2**31:
+	if filesize>=curlUseThreashold:
 		if(not curlAvailable):
 			print("ERROR: Not uploading %s: size is too big (%d bytes), but curl is unavailable."%(filename,filesize))
 			continue

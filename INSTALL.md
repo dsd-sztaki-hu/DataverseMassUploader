@@ -5,7 +5,8 @@
 ### Debian / Ubuntu Linux
 
     apt install python3 python3-pip curl
-    pip3 install pyDataverse
+    # after cloning the repository, go there and run
+    pip3 install -r requirements.txt
 
 ### Synology DSM
 
@@ -20,9 +21,11 @@
 ```
 python3 -m ensurepip
 python3 -m pip install --upgrade pip
-python3 -m pip install pydataverse
+# after cloning the repository, go there and run
+python3 -m pip install -r requirements.txt
 ```
 
 ## Download DataverseMassUploader using git
 
     git clone https://github.com/dsd-sztaki-hu/DataverseMassUploader
+

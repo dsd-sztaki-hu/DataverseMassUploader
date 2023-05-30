@@ -35,4 +35,3 @@ repositories. It is based on the pyDataverse library.
 
 # Issues
 
-* upload with curl sometimes does not work (specific versions of curl?), although curl reports success

@@ -31,7 +31,7 @@ def vp(level: int, str1: str, obj=None):
 
 def uploadWithCurl(filename,fileMetadata):
 	print("Size of %s is too big (%d bytes), uploading with curl."%(filename,filesize))
-	command='curl -f -H "X-Dataverse-key:%s" -X POST -F "file=@%s" -F "jsonData=%s" "%s/api/datasets/:persistentId/add?persistentId=%s"'%(
+	command='curl -f -H "X-Dataverse-key:%s" -X POST -F "file=@%s" -F \'jsonData=%s\' "%s/api/datasets/:persistentId/add?persistentId=%s"'%(
 				args.apiKey,filename,fileMetadata,args.baseUrl,args.dataset)
 	vp(1,"runnning command:\n"+command)
 	response=subprocess.run(command,shell=True, capture_output=True)

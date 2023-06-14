@@ -27,11 +27,17 @@ repositories. It is based on the pyDataverse library.
     ## Upload all files from current directory and all files from subdirectories 1 level deep
     python3 uploadFilesToExistingDataset.py -u https://dataverse.org -d hdl:HANDLEID/EXAMPLE_SHOULDER/EXAMPLE_ID -k API-KEY-HERE * */*
 
+    ## Download all files from a dataset
+    python3 downloadDatasetFiles.py -u https://dataverse.org -d hdl:HANDLEID/EXAMPLE_SHOULDER/EXAMPLE_ID -k API-KEY-HERE
+
 # Further configuration
 
 ## enviroment variables
 
-* DataverseMassUploaderCurlUseThreshold: the threshold in bytes over which curl is used. 2^25 by default, as python upload uses filesize*3 RAM.
+* DataverseMassUploaderCurlUseThreshold: The threshold in bytes over which curl is used. 2^25 by default, as python upload uses filesize*3 RAM.
+* DataverseApiKey: You can define the API key/token in this environment variable.
+* DataverseMassUploaderMaximumRetryCount: In case of an upload failure, the program retries the upload after some waiting. This specifies the maximum retry count.
+* DataverseMassUploaderMaximumWaitBetweenRetries: In case of an upload failure, the program waits between uploads in exponential increments. This sets the upper limit in seconds.
 
 # Issues
 

@@ -11,16 +11,23 @@ from pyDataverse.models import Dataverse, Dataset
 from var_dump import var_dump
 
 argparser = argparse.ArgumentParser(description ='Download files from existing dataset', argument_default=[])
-argparser.add_argument('-d', '--dataset', dest ='dataset', help='dataset pid to download from')
-argparser.add_argument('-u', '--dataverseBaseUrl', dest ='baseUrl', help='dataverse base URL')
-argparser.add_argument('-k', '--apiKey', dest ='apiKey', help='dataverse API key/token', default=None)
-argparser.add_argument('-o', '--overwrite-existing', dest='overwrite', help='overwrite existing files', action=argparse.BooleanOptionalAction, default=False)
+argparser.add_argument('-d', '--dataset', dest ='dataset', required=True,
+                       help='dataset pid to download from')
+argparser.add_argument('-u', '--dataverseBaseUrl', dest ='baseUrl', required=True,
+                       help='dataverse base URL')
+argparser.add_argument('-k', '--apiKey', dest ='apiKey', default=os.environ.get('DataverseApiKey'),
+                       help='Dataverse API key/token; you can also specify the DataverseApiKey environment variable instead.')
+argparser.add_argument('-o', '--overwrite-existing', dest='overwrite', action=argparse.BooleanOptionalAction, default=False,
+                       help='overwrite existing files')
 #argparser.add_argument("filePattern", nargs='*', help='the name of the file(s) to download')
 args = argparser.parse_args()
 #var_dump(args)
 
 curlAvailable=subprocess.run(["curl --version"], shell=True, capture_output=True).returncode == 0
 
+if not args.apiKey:
+	print("ERROR: API key/token must be defined either on the command line or in an environment variable.")
+	exit(argparser.print_usage())
 api = NativeApi(args.baseUrl,args.apiKey)
 data_api = DataAccessApi(args.baseUrl)
 

@@ -6,13 +6,15 @@ import time
 import shutil
 import argparse
 import subprocess
+import re
+import requests
 from pyDataverse.api import NativeApi, DataAccessApi, SearchApi
 from pyDataverse.models import Dataverse, Dataset
-from var_dump import var_dump
+#from var_dump import var_dump
 
 argparser = argparse.ArgumentParser(description ='Download files from existing dataset', argument_default=[])
-argparser.add_argument('-d', '--dataset', dest ='dataset', required=True,
-                       help='dataset pid to download from')
+argparser.add_argument('-d', '--dataset', dest ='dataset', required=False,
+                       help='dataset pid or private URL or private URL token to download from')
 argparser.add_argument('-u', '--dataverseBaseUrl', dest ='baseUrl', required=True,
                        help='dataverse base URL')
 argparser.add_argument('-k', '--apiKey', dest ='apiKey', default=os.environ.get('DataverseApiKey'),
@@ -26,13 +28,15 @@ args = argparser.parse_args()
 curlAvailable=subprocess.run(["curl --version"], shell=True, capture_output=True).returncode == 0
 
 if not args.apiKey:
-	print("ERROR: API key/token must be defined either on the command line or in an environment variable.")
-	exit(argparser.print_usage())
-api = NativeApi(args.baseUrl,args.apiKey)
-data_api = DataAccessApi(args.baseUrl)
+#	print("ERROR: API key/token must be defined either on the command line or in an environment variable.")
+#	exit(argparser.print_usage())
+	api = NativeApi(args.baseUrl)
+	data_api = DataAccessApi(args.baseUrl)
+else:
+	api = NativeApi(args.baseUrl,args.apiKey)
+	data_api = DataAccessApi(args.baseUrl)
 
-dataset = api.get_dataset(args.dataset)
-
+####### HELPERS #######
 def downloadFile(file_id,filename):
 	response = data_api.get_datafile(file_id)
 	with open(filename, "wb") as f:
@@ -49,8 +53,24 @@ def downloadFileCurl(file_id,filename):
 		print("  Response message was: '%s'"%response.stdout)
 	else:
 		print("Successful download: %s"%filename)
+####### END HELPERS #######
 
-files_list = dataset.json()['data']['latestVersion']['files']
+if re.match(r".*/privateurl.xhtml\?token=",args.dataset):
+	token=re.sub(r".*token=","",args.dataset)
+elif re.match(r".*/privateUrlDatasetVersion/",args.dataset):
+	token=re.sub(r".*/privateUrlDatasetVersion/","",args.dataset)
+elif not re.match(r".*:",args.dataset) and re.match(r"[a-z0-9-]{36}$",args.dataset):
+	token=args.dataset
+else:
+	token=None
+
+if token:
+	dataset = api.get_request(f"{args.baseUrl}/api/datasets/privateUrlDatasetVersion/{token}")
+	files_list = dataset.json()['data']['files']
+else:
+	dataset = api.get_dataset(args.dataset)
+	files_list = dataset.json()['data']['latestVersion']['files']
+
 for file in files_list:
 	filename = file["dataFile"]["filename"]
 	file_id = file["dataFile"]["id"]
@@ -79,4 +99,3 @@ for file in files_list:
 		downloadFileCurl(file_id,filename)
 	else:
 		downloadFile(file_id,filename)
-

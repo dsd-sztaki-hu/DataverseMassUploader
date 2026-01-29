@@ -10,7 +10,7 @@ import re
 import requests
 from pyDataverse.api import NativeApi, DataAccessApi, SearchApi
 from pyDataverse.models import Dataverse, Dataset
-#from var_dump import var_dump
+from var_dump import var_dump
 
 argparser = argparse.ArgumentParser(description ='Download files from existing dataset', argument_default=[])
 argparser.add_argument('-d', '--dataset', dest ='dataset', required=False,
@@ -55,12 +55,12 @@ def downloadFileCurl(file_id,filename):
 	#print('curl %s %s -o "%s" "%s/api/access/datafile/%s"'%(
 	#			api_key_param,cookie_param,filename,args.baseUrl,file_id))
 	response=subprocess.run(
-			'curl %s %s -o "%s" "%s/api/access/datafile/%s"'%(
+			'curl --fail --silent --show-error %s %s -o "%s" "%s/api/access/datafile/%s"'%(
 				api_key_param,cookie_param,filename,args.baseUrl,file_id),
 			shell=True, capture_output=True)
 	if response.returncode != 0:
 		print("Error downloading %s"%filename)
-		print("  Response message was: '%s'"%response.stdout)
+		print("  Response message was: '%s'"%(response.stdout+response.stderr))
 	else:
 		print("Successful download: %s"%filename)
 ####### END HELPERS #######

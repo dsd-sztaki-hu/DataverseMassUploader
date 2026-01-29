@@ -43,14 +43,20 @@ def downloadFile(file_id,filename):
 		f.write(response.content)
 
 def downloadFileCurl(file_id,filename):
-#	print("Size of %s is too big (%d bytes), downloading with curl."%(filename,filesize))
+	#print("Size of %s is too big (%d bytes), downloading with curl."%(filename,filesize))
 	if args.apiKey:
 		api_key_param=f'-H "X-Dataverse-key:{args.apiKey}"'
 	else:
 		api_key_param=''
+	if cookie:
+		cookie_param=f'-b "{cookie}"'
+	else:
+		cookie_param=''
+	#print('curl %s %s -o "%s" "%s/api/access/datafile/%s"'%(
+	#			api_key_param,cookie_param,filename,args.baseUrl,file_id))
 	response=subprocess.run(
-			'curl %s -o "%s" "%s/api/access/datafile/%s"'%(
-				api_key_param,filename,args.baseUrl,file_id),
+			'curl %s %s -o "%s" "%s/api/access/datafile/%s"'%(
+				api_key_param,cookie_param,filename,args.baseUrl,file_id),
 			shell=True, capture_output=True)
 	if response.returncode != 0:
 		print("Error downloading %s"%filename)
@@ -59,6 +65,7 @@ def downloadFileCurl(file_id,filename):
 		print("Successful download: %s"%filename)
 ####### END HELPERS #######
 
+# Detecting whether the dataset designation is is a private/preview access token
 if re.match(r".*/privateurl.xhtml\?token=",args.dataset):
 	token=re.sub(r".*token=","",args.dataset)
 elif re.match(r".*/privateUrlDatasetVersion/",args.dataset):
@@ -69,6 +76,8 @@ else:
 	token=None
 
 if token:
+	set_cookie_header = requests.get(f"https://repo.researchdata.hu/privateurl.xhtml?token={token}", allow_redirects=False).raw.headers._container["set-cookie"][1]
+	cookie=re.sub(r"; .*","",set_cookie_header)
 	dataset = api.get_request(f"{args.baseUrl}/api/datasets/privateUrlDatasetVersion/{token}")
 	files_list = dataset.json()['data']['files']
 else:
@@ -79,7 +88,7 @@ for file in files_list:
 	filename = file["dataFile"]["filename"]
 	file_id = file["dataFile"]["id"]
 	file_size = file["dataFile"]["filesize"]
-#	var_dump(file)
+	#var_dump(file)
 	print("File name {}, id {}, size {}".format(filename, file_id, file_size))
 	try:
 		filestat = os.stat(filename)
@@ -96,10 +105,10 @@ for file in files_list:
 			print("File with same name and size exists, skipping")
 			continue
 	except Exception as e:
-#		print(e)
+		#print(e)
 		pass
 	
-	if file_size>2**20:
+	if file_size>2**20 or cookie:
 		downloadFileCurl(file_id,filename)
 	else:
 		downloadFile(file_id,filename)

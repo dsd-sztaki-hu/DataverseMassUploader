@@ -44,9 +44,13 @@ def downloadFile(file_id,filename):
 
 def downloadFileCurl(file_id,filename):
 #	print("Size of %s is too big (%d bytes), downloading with curl."%(filename,filesize))
+	if args.apiKey:
+		api_key_param=f'-H "X-Dataverse-key:{args.apiKey}"'
+	else:
+		api_key_param=''
 	response=subprocess.run(
-			'curl -H "X-Dataverse-key:%s" -o "%s" "%s/api/access/datafile/%s"'%(
-				args.apiKey,filename,args.baseUrl,file_id),
+			'curl %s -o "%s" "%s/api/access/datafile/%s"'%(
+				api_key_param,filename,args.baseUrl,file_id),
 			shell=True, capture_output=True)
 	if response.returncode != 0:
 		print("Error downloading %s"%filename)
@@ -95,7 +99,7 @@ for file in files_list:
 #		print(e)
 		pass
 	
-	if file_size>2**3:
+	if file_size>2**20:
 		downloadFileCurl(file_id,filename)
 	else:
 		downloadFile(file_id,filename)

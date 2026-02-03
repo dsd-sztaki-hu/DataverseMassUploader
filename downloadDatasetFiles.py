@@ -10,7 +10,15 @@ import re
 import requests
 from pyDataverse.api import NativeApi, DataAccessApi, SearchApi
 from pyDataverse.models import Dataverse, Dataset
-from var_dump import var_dump
+
+DEBUG=os.environ.get('DEBUG')
+if DEBUG: from var_dump import var_dump
+def debug(message):
+	if os.environ.get('DEBUG'):
+		if isinstance(message, str):
+			print(message)
+		else:
+			var_dump(message)
 
 argparser = argparse.ArgumentParser(description ='Download files from existing dataset', argument_default=[])
 argparser.add_argument('-d', '--dataset', dest ='dataset', required=False,
@@ -23,47 +31,9 @@ argparser.add_argument('-o', '--overwrite-existing', dest='overwrite', action=ar
                        help='overwrite existing files')
 #argparser.add_argument("filePattern", nargs='*', help='the name of the file(s) to download')
 args = argparser.parse_args()
-#var_dump(args)
+debug(args)
 
 curlAvailable=subprocess.run(["curl --version"], shell=True, capture_output=True).returncode == 0
-
-if not args.apiKey:
-#	print("ERROR: API key/token must be defined either on the command line or in an environment variable.")
-#	exit(argparser.print_usage())
-	api = NativeApi(args.baseUrl)
-	data_api = DataAccessApi(args.baseUrl)
-else:
-	api = NativeApi(args.baseUrl,args.apiKey)
-	data_api = DataAccessApi(args.baseUrl)
-
-####### HELPERS #######
-def downloadFile(file_id,filename):
-	response = data_api.get_datafile(file_id)
-	with open(filename, "wb") as f:
-		f.write(response.content)
-
-def downloadFileCurl(file_id,filename):
-	#print("Size of %s is too big (%d bytes), downloading with curl."%(filename,filesize))
-	if args.apiKey:
-		api_key_param=f'-H "X-Dataverse-key:{args.apiKey}"'
-	else:
-		api_key_param=''
-	if cookie:
-		cookie_param=f'-b "{cookie}"'
-	else:
-		cookie_param=''
-	#print('curl %s %s -o "%s" "%s/api/access/datafile/%s"'%(
-	#			api_key_param,cookie_param,filename,args.baseUrl,file_id))
-	response=subprocess.run(
-			'curl --fail --silent --show-error %s %s -o "%s" "%s/api/access/datafile/%s"'%(
-				api_key_param,cookie_param,filename,args.baseUrl,file_id),
-			shell=True, capture_output=True)
-	if response.returncode != 0:
-		print("Error downloading %s"%filename)
-		print("  Response message was: '%s'"%(response.stdout+response.stderr))
-	else:
-		print("Successful download: %s"%filename)
-####### END HELPERS #######
 
 # Detecting whether the dataset designation is is a private/preview access token
 if re.match(r".*/privateurl.xhtml\?token=",args.dataset):
@@ -75,9 +45,44 @@ elif not re.match(r".*:",args.dataset) and re.match(r"[a-z0-9-]{36}$",args.datas
 else:
 	token=None
 
+if args.apiKey:
+	api = NativeApi(args.baseUrl,args.apiKey)
+	data_api = DataAccessApi(args.baseUrl,api_token=args.apiKey)
+elif token:
+	api = NativeApi(args.baseUrl,token)
+	data_api = DataAccessApi(args.baseUrl,api_token=token)
+else:
+	api = NativeApi(args.baseUrl)
+	data_api = DataAccessApi(args.baseUrl)
+
+####### HELPERS #######
+
+def downloadFile(file_id,filename):
+	response = data_api.get_datafile(file_id)
+	with open(filename, "wb") as f:
+		f.write(response.content)
+
+def downloadFileCurl(file_id,filename):
+	debug("Size of %s is too big, downloading with curl."%(filename))
+	if args.apiKey:
+		api_key_param=f'-H "X-Dataverse-key:{args.apiKey}"'
+	elif token:
+		api_key_param=f'-H "X-Dataverse-key:{token}"'
+	else:
+		api_key_param=''
+	debug(f'curl --fail --silent --show-error {api_key_param} -o "{filename}" "{args.baseUrl}/api/access/datafile/{file_id}"')
+	response=subprocess.run(
+			f'curl --fail --silent --show-error {api_key_param} -o "{filename}" "{args.baseUrl}/api/access/datafile/{file_id}"',
+			shell=True, capture_output=True)
+	if response.returncode != 0:
+		print("Error downloading %s"%filename)
+		print("  Response message was: '%s'"%(response.stdout+response.stderr))
+	else:
+		print("Successful download: %s"%filename)
+####### END HELPERS #######
+
+
 if token:
-	set_cookie_header = requests.get(f"https://repo.researchdata.hu/privateurl.xhtml?token={token}", allow_redirects=False).raw.headers._container["set-cookie"][1]
-	cookie=re.sub(r"; .*","",set_cookie_header)
 	dataset = api.get_request(f"{args.baseUrl}/api/datasets/privateUrlDatasetVersion/{token}")
 	files_list = dataset.json()['data']['files']
 else:
@@ -88,7 +93,7 @@ for file in files_list:
 	filename = file["dataFile"]["filename"]
 	file_id = file["dataFile"]["id"]
 	file_size = file["dataFile"]["filesize"]
-	#var_dump(file)
+	debug(file)
 	print("File name {}, id {}, size {}".format(filename, file_id, file_size))
 	try:
 		filestat = os.stat(filename)
@@ -105,10 +110,10 @@ for file in files_list:
 			print("File with same name and size exists, skipping")
 			continue
 	except Exception as e:
-		#print(e)
+		debug(e)
 		pass
 	
-	if file_size>2**20 or cookie:
+	if file_size>2**20:
 		downloadFileCurl(file_id,filename)
 	else:
 		downloadFile(file_id,filename)

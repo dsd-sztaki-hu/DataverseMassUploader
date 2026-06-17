@@ -6,6 +6,7 @@ import time
 import shutil
 import argparse
 import subprocess
+import urllib
 from functools import partial
 from pyDataverse.api import NativeApi, DataAccessApi, SearchApi
 from pyDataverse.models import Dataverse, Dataset
@@ -68,8 +69,26 @@ def printProgress():
 #	print('.', end = "")
 	print("Files uploaded: %d      Files failed to upload: %d       Total errors: %d"%(uploadedFiles,errorFiles,totalErrors), end='\r', flush=True)
 
+def hasOnlyAsciiChars(string):
+	for c in string:
+		if 127 < ord(c):
+			return False
+	return True
+
+def renameFileIfNecessary(filename, response):
+	if hasOnlyAsciiChars(filename):
+		return
+	vp(1,f"Non-ascii chars found in filename {filename}, fixing metadata")
+	metadata=json.loads(response)['data']['files'][0]
+	var_dump(metadata)
+	metadata['label']=filename
+	metadata['dataFile']['filename']=filename
+	var_dump(metadata)
+	api.update_datafile_metadata(metadata['dataFile']['id'], json_str=json.dumps(metadata), is_filepid=False)
+
 def success(filename, response):
 	global uploadedFiles
+	renameFileIfNecessary(filename, response)
 	vp(1,"Successful upload: %s"%filename)
 	vp(2,"  Response message was: '%s'"%response)
 	uploadedFiles+=1
@@ -82,9 +101,11 @@ def error(filename,responseString,response):
 	totalErrors+=1
 	raise RuntimeError()
 
+
 def uploadWithCurl(filename,fileMetadata):
 	vp(1,"Size of %s is too big (%d bytes), uploading with curl."%(filename,filesize))
-	command='curl -f -H "X-Dataverse-key:%s" -X POST -F "file=@%s" -F \'jsonData=%s\' "%s/api/datasets/:persistentId/add?persistentId=%s"'%(
+	# -H "Content-Type: multipart/form-data; charset=utf-8"
+	command='curl -f -H "X-Dataverse-key:%s" -X POST -F "file=@\\\"%s\\\"" -F \'jsonData=%s\' "%s/api/datasets/:persistentId/add?persistentId=%s"'%(
 				args.apiKey,filename,fileMetadata,args.baseUrl,args.dataset)
 	vp(2,"runnning command:\n"+command)
 	response=subprocess.run(command,shell=True, capture_output=True)
@@ -120,12 +141,13 @@ for filename in args.infile:
 	if totalErrors > 0: time.sleep(0.1) # there seems to be a bug in dataverse if files are uploaded to the same dataverse too rapidly. A 0.1s delay seems to fix it -- mostly... We will only wait here if there was a previous error.
 	filesize=os.lstat(filename).st_size
 	directoryLabel=os.path.dirname(filename)
+#	fileMetadata={"filename": urllib.parse.quote(filename)}
 	fileMetadata={"filename": filename}
 	if directoryLabel: fileMetadata["directoryLabel"]=directoryLabel
 	if args.description: fileMetadata["description"]=args.description
 	if args.tags: fileMetadata["categories"]=args.tags
 #	if args.tabularTags: fileMetadata["tabularTags"]=args.tabularTags ## disabled until this is fixed in Dataverse
-	fileMetadata=json.dumps(fileMetadata)
+	fileMetadata=json.dumps(fileMetadata,ensure_ascii=False)
 	vp(1,"File size: %d"%filesize)
 	currentUploadErrors=0
 	uploadSuccess=False

@@ -25,6 +25,10 @@ argparser.add_argument('-k', '--apiKey', dest ='apiKey', default=os.environ.get(
                        help='Dataverse API key/token; you can also specify the DataverseApiKey environment variable instead.')
 argparser.add_argument('-v', '--verbose', dest ='verbosity', action='count', default=0,
                        help='Verbosity level.')
+argparser.add_argument('-p', '--progress', dest ='progress', action='store_true',
+                       help='Show per-file upload progress. This forces all uploads through curl.')
+argparser.add_argument('--curl-ssl-no-revoke', dest ='curlSslNoRevoke', action='store_true',
+                       help='Pass --ssl-no-revoke to curl. This can help on Windows when certificate revocation checks are blocked.')
 argparser.add_argument('--description', dest ='description',
                        help='File description to set for all files.')
 argparser.add_argument('--tags', dest ='tags', type=_csv,
@@ -41,7 +45,38 @@ args = argparser.parse_args()
 
 ##### INITIALIZATION BEGIN #####
 
-curlAvailable=subprocess.run(["curl --version"], shell=True, capture_output=True).returncode == 0
+def findCurlCommand():
+	configuredCurlCommand=os.environ.get('DataverseMassUploaderCurlCommand')
+	if configuredCurlCommand:
+		return configuredCurlCommand
+
+	curlCommand=shutil.which("curl.exe") or shutil.which("curl")
+	if curlCommand:
+		return curlCommand
+
+	if os.name == "nt":
+		windowsDir=os.environ.get("SystemRoot", r"C:\Windows")
+		programFiles=os.environ.get("ProgramFiles", r"C:\Program Files")
+		for candidate in [
+			os.path.join(windowsDir, "System32", "curl.exe"),
+			os.path.join(windowsDir, "Sysnative", "curl.exe"),
+			os.path.join(programFiles, "Git", "mingw64", "bin", "curl.exe"),
+		]:
+			if os.path.exists(candidate):
+				return candidate
+
+	return None
+
+def isCurlAvailable(curlCommand):
+	if curlCommand is None:
+		return False
+	try:
+		return subprocess.run([curlCommand, "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+	except OSError:
+		return False
+
+curlCommand=findCurlCommand()
+curlAvailable=isCurlAvailable(curlCommand)
 curlUseThreashold=int(os.environ.get('DataverseMassUploaderCurlUseThreshold', 2**25))
 maximumRetryCount=int(os.environ.get('DataverseMassUploaderMaximumRetryCount', 10))
 maximumWaitBetweenRetries=int(os.environ.get('DataverseMassUploaderMaximumWaitBetweenRetries', 60))
@@ -51,7 +86,17 @@ totalErrors=0
 if not args.apiKey:
 	print("ERROR: API key/token must be defined either on the command line or in an environment variable.")
 	exit(argparser.print_usage())
+if args.progress and not curlAvailable:
+	print("ERROR: --progress requires curl, but curl is not available.")
+	print("If curl is installed, set DataverseMassUploaderCurlCommand to the full path of curl.exe.")
+	exit(1)
+if args.curlSslNoRevoke and not curlAvailable:
+	print("ERROR: --curl-ssl-no-revoke requires curl, but curl is not available.")
+	print("If curl is installed, set DataverseMassUploaderCurlCommand to the full path of curl.exe.")
+	exit(1)
 api = NativeApi(args.baseUrl,args.apiKey)
+if args.verbosity >= 2:
+	print("Using curl command: %s"%curlCommand)
 
 ##### INITIALIZATION END #####
 
@@ -105,10 +150,19 @@ def error(filename,responseString,response):
 def uploadWithCurl(filename,fileMetadata):
 	vp(1,"Size of %s is too big (%d bytes), uploading with curl."%(filename,filesize))
 	# -H "Content-Type: multipart/form-data; charset=utf-8"
-	command='curl -f -H "X-Dataverse-key:%s" -X POST -F "file=@\\\"%s\\\"" -F \'jsonData=%s\' "%s/api/datasets/:persistentId/add?persistentId=%s"'%(
-				args.apiKey,filename,fileMetadata,args.baseUrl,args.dataset)
-	vp(2,"runnning command:\n"+command)
-	response=subprocess.run(command,shell=True, capture_output=True)
+	command=[
+		curlCommand,
+		"--fail-with-body",
+		"-H", "X-Dataverse-key:%s"%args.apiKey,
+		"-X", "POST",
+		"-F", "file=@%s"%filename,
+		"-F", "jsonData=%s"%fileMetadata,
+		"%s/api/datasets/:persistentId/add?persistentId=%s"%(args.baseUrl,args.dataset),
+	]
+	if args.curlSslNoRevoke:
+		command.insert(1, "--ssl-no-revoke")
+	vp(2,"runnning command:\n"+" ".join(command))
+	response=subprocess.run(command, stdout=subprocess.PIPE)
 	vp(2,"response:",response)
 	if response.returncode != 0:
 		error(filename,response.stdout,response)
@@ -125,7 +179,7 @@ def uploadWithPyDataverse(filename,fileMetadata):
 	printProgress()
 
 def upload(filesize,filename,fileMetadata):
-	if filesize>=curlUseThreashold:
+	if args.progress or filesize>=curlUseThreashold:
 		if(not curlAvailable):
 			raise NotImplementedError("ERROR: Not uploading %s: size is too big (%d bytes), but curl is unavailable."%(filename,filesize))
 		uploadWithCurl(filename,fileMetadata)
@@ -157,7 +211,9 @@ for filename in args.infile:
 			uploadSuccess=True
 		except NotImplementedError as e:
 			print(e)
-			continue
+			errorFiles+=1
+			totalErrors+=1
+			break
 		except RuntimeError as e:
 			currentUploadErrors+=1
 			if currentUploadErrors>maximumRetryCount:

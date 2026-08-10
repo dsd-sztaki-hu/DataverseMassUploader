@@ -27,6 +27,12 @@ repositories. It is based on the pyDataverse library.
     ## Upload all files from current directory and all files from subdirectories 1 level deep
     python3 uploadFilesToExistingDataset.py -u https://dataverse.org -d hdl:HANDLEID/EXAMPLE_SHOULDER/EXAMPLE_ID -k API-KEY-HERE * */*
 
+    ## Upload files with curl's per-file progress meter
+    python3 uploadFilesToExistingDataset.py -p -u https://dataverse.org -d hdl:HANDLEID/EXAMPLE_SHOULDER/EXAMPLE_ID -k API-KEY-HERE * */*
+
+    ## Upload with curl progress and disable Windows certificate revocation checks
+    python3 uploadFilesToExistingDataset.py -p --curl-ssl-no-revoke -u https://dataverse.org -d hdl:HANDLEID/EXAMPLE_SHOULDER/EXAMPLE_ID -k API-KEY-HERE * */*
+
     ## Download all files from a dataset
     python3 downloadDatasetFiles.py -u https://dataverse.org -d hdl:HANDLEID/EXAMPLE_SHOULDER/EXAMPLE_ID -k API-KEY-HERE
 
@@ -35,6 +41,7 @@ repositories. It is based on the pyDataverse library.
 ## enviroment variables
 
 * DataverseMassUploaderCurlUseThreshold: The threshold in bytes over which curl is used. 2^25 by default, as python upload uses filesize*3 RAM.
+* DataverseMassUploaderCurlCommand: The full path of the curl executable to use, for example `C:\Windows\System32\curl.exe`, if curl cannot be detected automatically.
 * DataverseApiKey: You can define the API key/token in this environment variable.
 * DataverseMassUploaderMaximumRetryCount: In case of an upload failure, the program retries the upload after some waiting. This specifies the maximum retry count.
 * DataverseMassUploaderMaximumWaitBetweenRetries: In case of an upload failure, the program waits between uploads in exponential increments. This sets the upper limit in seconds.

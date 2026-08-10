@@ -135,16 +135,29 @@ def isDataverseSuccess(responseString):
 		return False
 	return responseJson.get("status") == "OK"
 
+def updateDatafileMetadata(fileId, metadata):
+	url="%s/api/files/%s/metadata"%(args.baseUrl,fileId)
+	response=api.post_request(
+		url,
+		files={"jsonData": (None, json.dumps(metadata,ensure_ascii=False))},
+	)
+	return response
+
+def isDatafileMetadataUpdateSuccess(response):
+	return response.status_code == 200 and response.content.startswith(b"File Metadata update has been completed:")
+
 def renameFileIfNecessary(filename, response):
 	if hasOnlyAsciiChars(filename):
 		return
 	vp(1,f"Non-ascii chars found in filename {filename}, fixing metadata")
 	metadata=json.loads(response)['data']['files'][0]
-	var_dump(metadata)
+	vp(2,"Original file metadata:",metadata)
 	metadata['label']=filename
 	metadata['dataFile']['filename']=filename
-	var_dump(metadata)
-	api.update_datafile_metadata(metadata['dataFile']['id'], json_str=json.dumps(metadata), is_filepid=False)
+	vp(2,"Fixed file metadata:",metadata)
+	response=updateDatafileMetadata(metadata['dataFile']['id'], metadata)
+	if not isDatafileMetadataUpdateSuccess(response):
+		error(filename,response.content,response)
 
 def success(filename, response):
 	global uploadedFiles

@@ -120,6 +120,19 @@ def hasOnlyAsciiChars(string):
 			return False
 	return True
 
+def curlFormFile(filename):
+	curlFilename=filename
+	if os.name == "nt":
+		curlFilename=os.path.abspath(filename).replace("\\", "/")
+	return 'file=@"%s"'%curlFilename.replace("\\", "\\\\").replace('"', '\\"')
+
+def isDataverseSuccess(responseString):
+	try:
+		responseJson=json.loads(responseString)
+	except ValueError:
+		return False
+	return responseJson.get("status") == "OK"
+
 def renameFileIfNecessary(filename, response):
 	if hasOnlyAsciiChars(filename):
 		return
@@ -155,7 +168,7 @@ def uploadWithCurl(filename,fileMetadata):
 		"--fail-with-body",
 		"-H", "X-Dataverse-key:%s"%args.apiKey,
 		"-X", "POST",
-		"-F", "file=@%s"%filename,
+		"-F", curlFormFile(filename),
 		"-F", "jsonData=%s"%fileMetadata,
 		"%s/api/datasets/:persistentId/add?persistentId=%s"%(args.baseUrl,args.dataset),
 	]
@@ -164,7 +177,7 @@ def uploadWithCurl(filename,fileMetadata):
 	vp(2,"runnning command:\n"+" ".join(command))
 	response=subprocess.run(command, stdout=subprocess.PIPE)
 	vp(2,"response:",response)
-	if response.returncode != 0:
+	if response.returncode != 0 or not isDataverseSuccess(response.stdout):
 		error(filename,response.stdout,response)
 	else:
 		success(filename, response.stdout)

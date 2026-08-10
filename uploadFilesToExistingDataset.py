@@ -94,6 +94,8 @@ if args.curlSslNoRevoke and not curlAvailable:
 	print("ERROR: --curl-ssl-no-revoke requires curl, but curl is not available.")
 	print("If curl is installed, set DataverseMassUploaderCurlCommand to the full path of curl.exe.")
 	exit(1)
+if args.baseUrl.endswith("/"):
+	args.baseUrl=args.baseUrl[:-1]
 api = NativeApi(args.baseUrl,args.apiKey)
 if args.verbosity >= 2:
 	print("Using curl command: %s"%curlCommand)
